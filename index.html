@@ -3,15 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="manifest" href="/manifest.json" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="Замазка" />
 <link rel="apple-touch-icon" href="/icon.png" />
-  <title>Калкулатор за замазка по стаи</title>
+  <title>Калкулатор за замазка по стаии</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="Roboto-Regular-normal.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+       font-family: 'Noto Sans', sans-serif;
       max-width: 800px;
       margin: auto;
       padding: 20px;
@@ -127,10 +129,10 @@
 
         exportLines.push(
           `${nameInput}`,
-          `  Дебелини: ${thicknessInput}`,
-          `  Площ: ${area} m²`,
-          `  Средна дебелина: ${avgRounded} см`,
-          `  Обем: ${volume} m³`,
+          `  Debelini: ${thicknessInput}`,
+          `  Plosht: ${area} m²`,
+          `  Sredna Debelina: ${avgRounded} cm`,
+          `  Obem: ${volume} m³`,
           ``
         );
       });
@@ -151,7 +153,7 @@
       exportLines.push(`Broi stai: ${roomCounter}`);
       exportLines.push(`Obshta Kvadratura: ${totalAreaRounded} m²`);
       exportLines.push(`Obshto Material: ${totalVolumeRounded} m³`);
-      exportLines.push(`Средна дебелина на целия обект: ${avgThicknessTotal} см`);
+      exportLines.push(`Sredna debelina na celiq obekt: ${avgThicknessTotal} cm`);
 
       document.getElementById('summary').innerHTML = summaryHTML;
 
@@ -172,11 +174,11 @@
         return;
       }
 
-      doc.setFont("helvetica");
+      doc.setFont("Roboto");
       doc.setFontSize(14);
-      doc.text(`Калкулация за замазка`, 15, 20);
+      doc.text(`Obobshtenie`, 15, 20);
       doc.setFontSize(11);
-      doc.text(`Обект: ${data.name}`, 15, 30);
+      doc.text(`Obekt: ${data.name}`, 15, 30);
 
       doc.setFontSize(10);
       const content = doc.splitTextToSize(data.lines.join("\n"), 180);
