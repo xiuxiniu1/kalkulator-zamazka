@@ -2,13 +2,12 @@
 <html lang="bg">
 <head>
   <meta charset="UTF-8" />
-  <title>Калкулатор за замазка</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ffffff"/>
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Калкулатор за замазка" />
-  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="/manifest.json" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Замазка" />
+<link rel="apple-touch-icon" href="/icon.png" />
+  <title>Калкулатор за замазка по стаи</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body {
@@ -17,7 +16,7 @@
       margin: auto;
       padding: 20px;
     }
-    input, button {
+    input, button, textarea {
       padding: 8px;
       margin: 5px 0;
       width: 100%;
@@ -35,7 +34,6 @@
       background-color: #f9f9f9;
       padding: 15px;
       border-radius: 8px;
-      white-space: pre-wrap;
     }
     #controls button {
       margin-top: 10px;
@@ -43,7 +41,7 @@
   </style>
 </head>
 <body>
-  <h2>Калкулатор за замазка</h2>
+  <h2>Калкулатор за замазка (по стаи)</h2>
 
   <label><strong>Име на обект:</strong></label>
   <input type="text" id="projectName" placeholder="напр. Апартамент Витоша 3, етаж 2" />
@@ -76,7 +74,7 @@
         <h3>Стая ${roomCount}</h3>
         <label>Име на стая:</label>
         <input type="text" class="room-name" placeholder="напр. Спалня, Хол" />
-        <label>Дебелини (в см, от 1 до 20, разделени със запетая):</label>
+        <label>Дебелини (в см, разделени със запетая):</label>
         <input type="text" class="thicknesses" placeholder="напр. 5.2, 5.55, 6.1" />
         <label>Квадратура (в m²):</label>
         <input type="number" class="area" placeholder="напр. 30.75" step="0.01" />
@@ -105,10 +103,8 @@
           .map(t => parseFloat(t.trim()))
           .filter(t => !isNaN(t));
 
-        const validThicknesses = thicknesses.filter(t => t >= 1 && t <= 20);
-
-        if (thicknesses.length === 0 || isNaN(areaRaw) || validThicknesses.length !== thicknesses.length) {
-          resultDiv.innerHTML = `<span style="color:red">Моля, въведи дебелини между 1 и 20 см и квадратура.</span>`;
+        if (thicknesses.length === 0 || isNaN(areaRaw)) {
+          resultDiv.innerHTML = `<span style="color:red">Моля попълни правилно стойностите.</span>`;
           return;
         }
 
@@ -127,8 +123,7 @@
           Обем: ${volume} m³
         `;
 
-        summaryHTML += `${nameInput}: ${volume} m³ / ${area} m²
-`;
+        summaryHTML += `${nameInput}: ${volume} m³ / ${area} m²<br>`;
 
         exportLines.push(
           `${nameInput}`,
@@ -142,22 +137,23 @@
 
       const totalAreaRounded = round2(totalArea);
       const totalVolumeRounded = round2(totalVolume);
-      const avgThicknessTotal = totalAreaRounded > 0 ? round2((totalVolumeRounded / totalAreaRounded) * 100) : 0;
+      // средна дебелина на целия обект
+      const avgThicknessTotal = totalAreaRounded > 0 ? round2(totalVolumeRounded / totalAreaRounded * 100) : 0;
 
       summaryHTML += `
-Брой стаи: ${roomCounter}
-Обща квадратура: ${totalAreaRounded} m²
-Общо количество материал: ${totalVolumeRounded} m³
-Средна дебелина на целия обект: ${avgThicknessTotal} см
-`;
+        <br><strong>Брой стаи: ${roomCounter}</strong><br>
+        <strong>Обща квадратура: ${totalAreaRounded} m²</strong><br>
+        <strong>Общо количество материал: ${totalVolumeRounded} m³</strong><br>
+        <strong>Средна дебелина на целия обект: ${avgThicknessTotal} см</strong>
+      `;
 
       exportLines.push(`---`);
-      exportLines.push(`Брой стаи: ${roomCounter}`);
-      exportLines.push(`Обща квадратура: ${totalAreaRounded} m²`);
-      exportLines.push(`Общо материал: ${totalVolumeRounded} m³`);
+      exportLines.push(`Broi stai: ${roomCounter}`);
+      exportLines.push(`Obshta Kvadratura: ${totalAreaRounded} m²`);
+      exportLines.push(`Obshto Material: ${totalVolumeRounded} m³`);
       exportLines.push(`Средна дебелина на целия обект: ${avgThicknessTotal} см`);
 
-      document.getElementById('summary').textContent = summaryHTML;
+      document.getElementById('summary').innerHTML = summaryHTML;
 
       const project = document.getElementById("projectName").value || "Без име";
       window.latestExportData = {
@@ -166,7 +162,7 @@
       };
     }
 
-    async function exportPDF() {
+    function exportPDF() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       const data = window.latestExportData;
@@ -183,13 +179,13 @@
       doc.text(`Обект: ${data.name}`, 15, 30);
 
       doc.setFontSize(10);
-      const content = doc.splitTextToSize(data.lines.join("
-"), 180);
+      const content = doc.splitTextToSize(data.lines.join("\n"), 180);
       doc.text(content, 15, 40);
 
       doc.save(`zamazka-${data.name.replace(/\s+/g, "_")}.pdf`);
     }
 
+    // Добавя първа стая при зареждане
     addRoom();
   </script>
 </body>
