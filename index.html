@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <title>Калкулатор за замазка</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff"/>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Калкулатор за замазка" />
+  <link rel="apple-touch-icon" href="icon.png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+    }
+    input, button {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .room {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+    }
+    #summary {
+      font-weight: bold;
+      margin-top: 20px;
+      background-color: #f9f9f9;
+      padding: 15px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+    }
+    #controls button {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Калкулатор за замазка</h2>
+
+  <label><strong>Име на обект:</strong></label>
+  <input type="text" id="projectName" placeholder="напр. Апартамент Витоша 3, етаж 2" />
+
+  <div id="rooms"></div>
+
+  <div id="controls">
+    <button onclick="addRoom()">+ Добави стая</button>
+    <button onclick="calculateAll()">Изчисли всички</button>
+    <button onclick="exportPDF()">📄 Експорт в PDF</button>
+  </div>
+
+  <div id="summary"></div>
+
+  <script>
+    let roomCount = 0;
+
+    function round2(x) {
+      return Math.round(x * 100) / 100;
+    }
+
+    function addRoom() {
+      const roomsDiv = document.getElementById('rooms');
+      roomCount++;
+
+      const roomDiv = document.createElement('div');
+      roomDiv.className = 'room';
+      roomDiv.id = `room-${roomCount}`;
+      roomDiv.innerHTML = `
+        <h3>Стая ${roomCount}</h3>
+        <label>Име на стая:</label>
+        <input type="text" class="room-name" placeholder="напр. Спалня, Хол" />
+        <label>Дебелини (в см, от 1 до 20, разделени със запетая):</label>
+        <input type="text" class="thicknesses" placeholder="напр. 5.2, 5.55, 6.1" />
+        <label>Квадратура (в m²):</label>
+        <input type="number" class="area" placeholder="напр. 30.75" step="0.01" />
+        <div class="result"></div>
+      `;
+
+      roomsDiv.appendChild(roomDiv);
+    }
+
+    function calculateAll() {
+      const roomDivs = document.querySelectorAll('.room');
+      let totalVolume = 0;
+      let totalArea = 0;
+      let roomCounter = 0;
+      let summaryHTML = '';
+      let exportLines = [];
+
+      roomDivs.forEach((roomDiv, index) => {
+        const nameInput = roomDiv.querySelector('.room-name').value || `Стая ${index + 1}`;
+        const thicknessInput = roomDiv.querySelector('.thicknesses').value;
+        const areaRaw = parseFloat(roomDiv.querySelector('.area').value);
+        const resultDiv = roomDiv.querySelector('.result');
+
+        const thicknesses = thicknessInput
+          .split(',')
+          .map(t => parseFloat(t.trim()))
+          .filter(t => !isNaN(t));
+
+        const validThicknesses = thicknesses.filter(t => t >= 1 && t <= 20);
+
+        if (thicknesses.length === 0 || isNaN(areaRaw) || validThicknesses.length !== thicknesses.length) {
+          resultDiv.innerHTML = `<span style="color:red">Моля, въведи дебелини между 1 и 20 см и квадратура.</span>`;
+          return;
+        }
+
+        const avgThickness = thicknesses.reduce((a, b) => a + b, 0) / thicknesses.length;
+        const avgRounded = round2(avgThickness);
+        const area = round2(areaRaw);
+        const volume = round2((avgRounded / 100) * area);
+
+        totalVolume += volume;
+        totalArea += area;
+        roomCounter++;
+
+        resultDiv.innerHTML = `
+          <strong>${nameInput}</strong><br>
+          Средна дебелина: ${avgRounded} см<br>
+          Обем: ${volume} m³
+        `;
+
+        summaryHTML += `${nameInput}: ${volume} m³ / ${area} m²
+`;
+
+        exportLines.push(
+          `${nameInput}`,
+          `  Дебелини: ${thicknessInput}`,
+          `  Площ: ${area} m²`,
+          `  Средна дебелина: ${avgRounded} см`,
+          `  Обем: ${volume} m³`,
+          ``
+        );
+      });
+
+      const totalAreaRounded = round2(totalArea);
+      const totalVolumeRounded = round2(totalVolume);
+      const avgThicknessTotal = totalAreaRounded > 0 ? round2((totalVolumeRounded / totalAreaRounded) * 100) : 0;
+
+      summaryHTML += `
+Брой стаи: ${roomCounter}
+Обща квадратура: ${totalAreaRounded} m²
+Общо количество материал: ${totalVolumeRounded} m³
+Средна дебелина на целия обект: ${avgThicknessTotal} см
+`;
+
+      exportLines.push(`---`);
+      exportLines.push(`Брой стаи: ${roomCounter}`);
+      exportLines.push(`Обща квадратура: ${totalAreaRounded} m²`);
+      exportLines.push(`Общо материал: ${totalVolumeRounded} m³`);
+      exportLines.push(`Средна дебелина на целия обект: ${avgThicknessTotal} см`);
+
+      document.getElementById('summary').textContent = summaryHTML;
+
+      const project = document.getElementById("projectName").value || "Без име";
+      window.latestExportData = {
+        name: project,
+        lines: exportLines
+      };
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const data = window.latestExportData;
+
+      if (!data || !data.lines.length) {
+        alert("Моля първо натисни 'Изчисли всички'");
+        return;
+      }
+
+      doc.setFont("helvetica");
+      doc.setFontSize(14);
+      doc.text(`Калкулация за замазка`, 15, 20);
+      doc.setFontSize(11);
+      doc.text(`Обект: ${data.name}`, 15, 30);
+
+      doc.setFontSize(10);
+      const content = doc.splitTextToSize(data.lines.join("
+"), 180);
+      doc.text(content, 15, 40);
+
+      doc.save(`zamazka-${data.name.replace(/\s+/g, "_")}.pdf`);
+    }
+
+    addRoom();
+  </script>
+</body>
+</html>
